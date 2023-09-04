@@ -185,3 +185,59 @@ export function parseUrl(url){
 	const doc = parser.parseFromString(html, "text/html");
 	return doc.scripts[0].src;
 }
+
+class Deferred {
+	promise;
+	resolve;
+	reject;
+	constructor() {
+		this.promise = new Promise((resolve, reject) => {
+			this.resolve = resolve;
+			this.reject = reject;
+		});
+	}
+}
+class AsyncTaskQueue {
+	asyncTasks = [];
+	push(task) {
+		const deferrExec = new Deferred();
+		this.asyncTasks.push({
+			task,
+			resolve: deferrExec.resolve
+		});
+		return task
+			.then((res) => {
+				this.run(task, res);
+				return deferrExec.promise;
+			})
+			.catch((err) => {
+				this.delete(task);
+				deferrExec.reject(err);
+			});
+	}
+	delete(task) {
+		const index = this.findIndex(task)
+		if (index > -1) {
+			this.asyncTasks.splice(index, 1);
+		}
+	}
+	run(task, resolveVal) {
+		const i = this.findIndex(task)
+		if (i === 0) {
+			let headTask = this.asyncTasks[0];
+			headTask.resolveVal = resolveVal
+			while (headTask?.hasOwnProperty("resolveVal")) {
+				headTask.resolve(headTask.resolveVal);
+				this.asyncTasks.shift();
+				headTask = this.asyncTasks[0];
+			}
+		} else {
+			this.asyncTasks[i].resolveVal = resolveVal;
+		}
+	}
+	findIndex(task) {
+		return this.asyncTasks.findIndex((v) => v.task === task);
+	}
+}
+
+export const asyncTaskQueue = new AsyncTaskQueue()

@@ -13,6 +13,7 @@ import {
 	noteGlobalProps,
 	readResAsString,
 	requestIdleCallback,
+	asyncTaskQueue
 } from './utils';
 
 const styleCache = {};
@@ -167,7 +168,7 @@ export function execScripts(entry, scripts, proxy = window, opts = {}) {
 		scopedGlobalVariables = [],
 	} = opts;
 
-	return getExternalScripts(scripts, fetch, error)
+	return asyncTaskQueue.push(getExternalScripts(scripts, fetch, error))
 		.then(scriptsText => {
 
 			const geval = (scriptSrc, inlineScript) => {
